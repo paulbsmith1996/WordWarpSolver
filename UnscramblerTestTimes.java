@@ -1,50 +1,7 @@
 /**
  * @author - Paul Baird-Smith    November 9, 2017
  *
- * Word Unscrambler
- *
- * ======================================================================================
- *
- * Unscrambler wants to solve the following problem:
- *
- *
- * Given a target word, we would like to find all the words in the English language
- * that can be made using only the letters from the target word. For example, if
- * our target word is "tree", we would like to print a list of words including
- * "tee", "ret", "ere", and others (the list changes depending on which words you
- * decide to include in the English language). As demonstrated by the example, any
- * repeated letter in the target word can be repeated in a resulting word up to the
- * number of times it appears in the target word (for "tree", we are allowed 2 "e"s). 
- *
- * ======================================================================================
- *
- * We solve this problem with 2 approaches:
- *
- * 1) We can find all of the permutations of the letters in the target word and
- * check for membership in the dictionary. This approach is preferred for shorter
- * words, and becomes less desirable after we pass the number of words in the English
- * language (currently between 100,000 and 150,000).
- *
- * 2) Check all the words in the dictionary to see if they can be made from the letters
- * in the target word. This approach is useful for longer words, with repeat letters. A
- * prime example of this is the word "telephone".
- *
- * ======================================================================================
- *
- * Unscrambler takes at least one argument: the target word. After running, it prints a
- * list of all the words that can be written using its letters. An example of how to run
- * Unscrambler is:
- *
- *           java Unscrambler helicopter
- *
- * Here, the target word is helicopter. The program expects the target word as the first
- * argument, and defaults to "a" if no argument is given.
- *
- * A second argument passed is a mode integer which can be 0, 1, or 2. If mode 0 is used,
- * the program will run approach (1) above. If mode 1 is used, the program will run
- * approach (2). If mode 2 is selected, the program will determine which strategy is the
- * best depending on the target word length and run this solution. The program defaults
- * to mode 2.
+ * Word Unscrambler Time Tester
  *
  * Email ppb366@cs.utexas.edu with any questions
  */
@@ -54,8 +11,9 @@
 import java.util.Vector;
 import java.io.*;
 import java.util.Scanner;
+import java.util.Random;
 
-public class Unscrambler {
+public class UnscramblerTestTimes {
 
     // Constant for output formatting
     private static final int WORDS_PER_LINE = 10;
@@ -64,78 +22,70 @@ public class Unscrambler {
     private static final String DICT_FILE = "wordsEn.txt";
 
     // The length that determines whether we use approach 1 or 2
-    private static final int THRESHOLD = 5;
+    private static final int THRESHOLD = 4;
 
     // Vector holding all words in the English language
     private static Vector<String> enWords;
+    
+    private static int NUM_TESTS = 200;
 
     /**
      * Main method, where we can try both solutions.
      */
     public static void main(String[] args) {
 
-	long start = System.currentTimeMillis();
+	Random r = new Random();
 
-	int mode = 2;
-
-	// Get the word we are unscrambling (defaults to "a")
-	String given = "a";
-	if(args.length > 0) {
-	    given = args[0];
-	}
-
-	if(args.length > 1) {
-	    try {
-		mode = Integer.parseInt(args[1]);
-	    } catch(Exception e) {
-		System.err.println("ERROR: Invalid mode specified.");
-	    }
-	}
+	Vector<String> testWords = new Vector<String>();
 
 	// Create a vector with all the words in the dictionary
 	enWords = generateWordList();
+	int size = enWords.size();
 
-	System.out.println("\nResult words:\n");
-
-	if(mode == 0 || (mode == 2 && given.length() < THRESHOLD)) {
-	    // This is the slow way to do it. Get all the permutations of the letters of the
-	    // word we are unscrambling and check them in the dictionary. This gets unwieldy
-	    // and difficult to manage past 7-8 letters
-	    Vector<String> allPerms = getPerms(given);
-	    
-	    int count = 0;
-
-	    for(String word: allPerms) {
-		if(enWords.contains(word)) {
-		    System.out.print(word + ", ");
-		    count++;
-
-		    if((count + 1) % WORDS_PER_LINE == 0) {
-			System.out.println();
-		    }
-		}
-
-
-	    }
-
-	} else {
-	    
-	    int count = 0;
-	    
-	    Vector<String> goodWords = checkAllWords(given);
-	    for(String word: goodWords) {
-		System.out.print(word + ", ");	    
-		count++;
-
-		if(count % WORDS_PER_LINE == 0) {
-		    System.out.println();
-		}
-	    }
+	for(int i = 0; i < NUM_TESTS; i++) {
+	    testWords.add(enWords.elementAt(r.nextInt(size)));
 	}
-
-	long end = System.currentTimeMillis();
 	
-	System.out.println("\n\nProgram terminated in " + (end - start) + " ms.\n");
+	System.out.println("testWords generated with length " + testWords.size());
+
+	long[] avgModeTimes = new long[3];
+	
+	for(int mode = 1; mode <= 2; mode++) {
+	    
+	    Vector<Long> times = new Vector<Long>();
+
+	    for(String given: testWords) {
+		long start = System.currentTimeMillis();
+		if(mode == 0 || (mode == 2 && given.length() <= THRESHOLD)) {
+
+		    Vector<String> allPerms = getPerms(given);
+		    
+		} else {
+		    Vector<String> goodWords = checkAllWords(given);
+		}
+		
+		long end = System.currentTimeMillis();
+		
+		times.add((end - start));
+	    }
+
+	    System.out.println("Tested a mode");
+	    
+	    long sum = 0;
+	    for(long time: times) {
+		sum += time;
+	    }
+	    
+	    sum /= times.size();
+	    avgModeTimes[mode] = sum;
+	}
+	
+	System.out.println("\n");
+	
+	for(int i = 0; i <= 2; i++) {
+	    System.out.println("Mode " + i + " avg time: " + avgModeTimes[i]);
+	}
+	
 	return;
 	
     }
@@ -255,7 +205,7 @@ public class Unscrambler {
 	for(char c: letters) {
 
 	    // Add our new permutation if we haven't already found it
-	    if(!perms.contains(word + c)) {
+	    if(!perms.contains(word + c) && enWords.contains(word + c)) {
 		perms.add(word + c);
 	    }
 
